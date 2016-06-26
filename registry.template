@@ -11,6 +11,27 @@
             "Type" : "String",
             "Default" : "docker-registry",
             "AllowedPattern" : "^[a-z][a-z0-9\\-_]*"
+        },
+        "InstanceType" : {
+            "Description" : "EC2 instance type",
+            "Type" : "String",
+            "Default" : "t2.micro",
+            "AllowedValues" : [ "t2.micro", "t2.small", "t2.medium", "c4.large", "m4.large" ],
+            "ConstraintDescription" : "Must be a valid EC2 instance type."
+        },
+        "AMILookupModuleName" : {
+            "Description" : "The name of the JavaScript file",
+            "Type" : "String",
+            "Default" : "amilookup"
+        },
+        "AMILookupS3Bucket" : {
+            "Description" : "The name of the bucket that contains your packaged source",
+            "Type" : "String"
+        },
+        "AMILookupS3Key" : {
+            "Description" : "The name of the ZIP package",
+            "Type" : "String",
+            "Default" : "amilookup.zip"
         }
     },
     "Resources" : {
@@ -21,6 +42,72 @@
                     { "Key": "Project", "Value" : { "Ref" : "ProjectName" } },
                     { "Key": "Application", "Value" : { "Ref" : "ApplicationName" } }
                 ]
+            }
+        },
+
+        "RegistryInstance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "InstanceType" : { "Ref" : "InstanceType" },
+                "ImageId": { "Fn::GetAtt": [ "AMIInfo", "Id" ] },
+                "Tags" : [
+                    { "Key": "Project", "Value" : { "Ref" : "ProjectName" } },
+                    { "Key": "Application", "Value" : { "Ref" : "ApplicationName" } }
+                ]
+            }
+        },
+
+        "AMIInfo": {
+            "Type": "Custom::AMIInfo",
+            "Properties": {
+                "ServiceToken": { "Fn::GetAtt" : [ "AMIInfoFunction", "Arn" ] },
+                "Region": { "Ref": "AWS::Region" },
+                "Architecture": "HVM64"
+            }
+        },
+
+        "AMIInfoFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Code": {
+                    "S3Bucket": { "Ref": "AMILookupS3Bucket" },
+                    "S3Key": { "Ref": "AMILookupS3Key" }
+                },
+                "Handler": { "Fn::Join" : [ "", [ { "Ref": "AMILookupModuleName" },".handler"] ] },
+                "Role": { "Fn::GetAtt" : [ "LambdaExecutionRole", "Arn" ] },
+                "Runtime": "nodejs",
+                "Timeout": "30"
+            }
+        },
+
+        "LambdaExecutionRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Principal": { "Service": [ "lambda.amazonaws.com" ] },
+                        "Action": [ "sts:AssumeRole" ]
+                    }]
+                },
+                "Path": "/",
+                "Policies": [{
+                    "PolicyName": "root",
+                    "PolicyDocument": {
+                        "Version": "2012-10-17",
+                        "Statement": [{
+                            "Effect": "Allow",
+                            "Action": [ "logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents" ],
+                            "Resource": "arn:aws:logs:*:*:*"
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": [ "ec2:DescribeImages" ],
+                            "Resource": "*"
+                        }]
+                    }
+                }]
             }
         }
     }
