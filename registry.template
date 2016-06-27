@@ -8,6 +8,10 @@
             "AllowedValues" : [ "t2.micro", "t2.small", "t2.medium", "c4.large", "m4.large" ],
             "ConstraintDescription" : "Must be a valid EC2 instance type."
         },
+        "AvailabilityZone": {
+            "Description": "Availability Zone of the Subnet",
+            "Type": "AWS::EC2::AvailabilityZone::Name"
+        },
         "AMILookupModuleName" : {
             "Description" : "The name of the JavaScript file",
             "Type" : "String",
@@ -48,7 +52,8 @@
             "Type": "AWS::EC2::Instance",
             "Properties": {
                 "InstanceType" : { "Ref" : "InstanceType" },
-                "ImageId": { "Fn::GetAtt": [ "AMIInfo", "Id" ] },
+                "ImageId" : { "Fn::GetAtt": [ "AMIInfo", "Id" ] },
+                "AvailabilityZone" : { "Ref" : "AvailabilityZone" },
                 "SecurityGroupIds" : [ { "Ref" : "InstanceSecurityGroup" } ],
                 "KeyName" : { "Ref" : "SSHKeyName" },
                 "Tags" : [ {"Key" : "Application", "Value" : { "Ref" : "AWS::StackName"} } ],
