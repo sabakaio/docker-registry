@@ -1,17 +1,6 @@
 {
     "AWSTemplateFormatVersion" : "2010-09-09",
     "Parameters" : {
-        "ProjectName" : {
-            "Description" : "Project slug to use for tagging and naming",
-            "Type" : "String",
-            "AllowedPattern" : "^[a-z][a-z0-9\\-_]*"
-        },
-        "ApplicationName" : {
-            "Description" : "Application slug to use for tagging and naming",
-            "Type" : "String",
-            "Default" : "docker-registry",
-            "AllowedPattern" : "^[a-z][a-z0-9\\-_]*"
-        },
         "InstanceType" : {
             "Description" : "EC2 instance type",
             "Type" : "String",
@@ -51,10 +40,7 @@
         "Storage" : {
             "Type" : "AWS::S3::Bucket",
             "Properties" : {
-                "Tags" : [
-                    { "Key": "Project", "Value" : { "Ref" : "ProjectName" } },
-                    { "Key": "Application", "Value" : { "Ref" : "ApplicationName" } }
-                ]
+                "Tags" : [ {"Key" : "Application", "Value" : { "Ref" : "AWS::StackName"} } ]
             }
         },
 
@@ -65,10 +51,7 @@
                 "ImageId": { "Fn::GetAtt": [ "AMIInfo", "Id" ] },
                 "SecurityGroupIds" : [ { "Ref" : "InstanceSecurityGroup" } ],
                 "KeyName" : { "Ref" : "KeyName" },
-                "Tags" : [
-                    { "Key": "Project", "Value" : { "Ref" : "ProjectName" } },
-                    { "Key": "Application", "Value" : { "Ref" : "ApplicationName" } }
-                ]
+                "Tags" : [ {"Key" : "Application", "Value" : { "Ref" : "AWS::StackName"} } ]
             }
         },
 
