@@ -22,7 +22,7 @@
             "Type" : "String",
             "Default" : "amilookup.zip"
         },
-        "KeyName": {
+        "SSHKeyName": {
             "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
             "Type": "AWS::EC2::KeyPair::KeyName"
         },
@@ -50,7 +50,7 @@
                 "InstanceType" : { "Ref" : "InstanceType" },
                 "ImageId": { "Fn::GetAtt": [ "AMIInfo", "Id" ] },
                 "SecurityGroupIds" : [ { "Ref" : "InstanceSecurityGroup" } ],
-                "KeyName" : { "Ref" : "KeyName" },
+                "KeyName" : { "Ref" : "SSHKeyName" },
                 "Tags" : [ {"Key" : "Application", "Value" : { "Ref" : "AWS::StackName"} } ]
             }
         },
