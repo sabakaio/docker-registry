@@ -51,7 +51,52 @@
                 "ImageId": { "Fn::GetAtt": [ "AMIInfo", "Id" ] },
                 "SecurityGroupIds" : [ { "Ref" : "InstanceSecurityGroup" } ],
                 "KeyName" : { "Ref" : "SSHKeyName" },
-                "Tags" : [ {"Key" : "Application", "Value" : { "Ref" : "AWS::StackName"} } ]
+                "Tags" : [ {"Key" : "Application", "Value" : { "Ref" : "AWS::StackName"} } ],
+                "UserData": { "Fn::Base64" : { "Fn::Join" : ["", [
+                    "#!/bin/bash -xe\n",
+                    "yum update -y\n",
+                    "export CFN_PARAMS='",
+                    " --region ", { "Ref" : "AWS::Region" },
+                    " --stack ", { "Ref" : "AWS::StackId" },
+                    " --resource RegistryInstance", "'\n",
+                    "/opt/aws/bin/cfn-init -v -c default $CFN_PARAMS\n",
+                    "/opt/aws/bin/cfn-signal -e 0 $CFN_PARAMS\n"
+                ]]}}
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Init": {
+                    "configSets" : {
+                        "default" : [ "docker_host" ]
+                    },
+                    "docker_host": {
+                        "packages": {
+                            "yum" : {
+                                "docker" : []
+                            }
+                        },
+                        "commands": {
+                            "1_docker_user" : {
+                                "command" : "usermod -aG docker ec2-user"
+                            },
+                            "2_install_compose" : {
+                                "command" : "pip install docker-compose"
+                            }
+                        },
+                        "services": {
+                            "sysvinit": {
+                                "docker": {
+                                    "enabled": true,
+                                    "ensureRunning" : "true"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "CreationPolicy" : {
+                "ResourceSignal" : {
+                    "Timeout" : "PT5M"
+                }
             }
         },
 
