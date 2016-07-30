@@ -1,7 +1,7 @@
 from functools import partial
 
 from troposphere import Output, Parameter, Template
-from troposphere import GetAtt, Ref
+from troposphere import GetAtt, Ref, Join
 from troposphere import constants as c, ec2, s3
 
 from helpers import iam
@@ -104,10 +104,37 @@ registry_domain_email = template.add_parameter(Parameter(
     Type=c.STRING,
     Description='Email to use on certificate issue'
 ))
+
+registry_certs = '/opt/registry/certs/'
+registry_compose = Join('', [
+    'version: "2"\n',
+    'services:\n',
+    '  registry:\n',
+    '    restart: always\n',
+    '    image: registry:2\n',
+    '    container_name: registry\n',
+    '    ports:\n',
+    '      - 443:5000\n',
+    '    environment:\n',
+    '      REGISTRY_STORAGE: s3\n',
+    '      REGISTRY_STORAGE_S3_REGION: ', Ref('AWS::Region'), '\n',
+    '      REGISTRY_STORAGE_S3_ACCESSKEY: ""\n',
+    '      REGISTRY_STORAGE_S3_SECRETKEY: ""\n',
+    '      REGISTRY_STORAGE_S3_BUCKET: ', Ref(bucket), '\n',
+    '      REGISTRY_HTTP_TLS_CERTIFICATE: /certs/fullchain.pem\n',
+    '      REGISTRY_HTTP_TLS_KEY: /certs/privkey.pem\n',
+    '    volumes:\n',
+    '      - {d}:/certs:ro\n'.format(d=registry_certs),
+])
+
 meta.add_init(
     registry,
     meta.docker,
-    meta.certbot(Ref(registry_domain), Ref(registry_domain_email))
+    meta.certbot(
+        Ref(registry_domain),
+        Ref(registry_domain_email),
+        copy_to=registry_certs),
+    meta.docker_compose('registry', registry_compose)
 )
 
 eip = template.add_parameter(Parameter(

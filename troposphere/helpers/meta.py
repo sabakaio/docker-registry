@@ -4,11 +4,14 @@ from troposphere import cloudformation as cf, ec2, autoscaling as au
 
 def docker():
     return cf.InitConfig(
-        'docker',
+        'Docker',
         packages={'yum': {'docker': []}},
         commands={
             'docker_user': {
                 'command': 'usermod -aG docker ec2-user'
+            },
+            'install_compose': {
+                'command': 'pip install docker-compose'
             },
         },
         services={
@@ -22,11 +25,54 @@ def docker():
     )
 
 
-def certbot(domain, email):
-    script_name = '/opt/certbot-auto'
-    conf_dir = '/opt/certs'
+def docker_compose(name, compose_yml):
+    name = name.lower()
+    compose_file = '/opt/{n}/docker-compose.yml'.format(n=name)
     return cf.InitConfig(
-        'certbot',
+        'Compose' + name.title(),
+        files={
+            compose_file: {
+                'content': compose_yml,
+                'mode': '000664',
+                'owner': 'root',
+                'group': 'docker',
+            },
+        },
+        commands={
+            'up': {
+                'command': '/usr/local/bin/docker-compose -f {f} up -d'.format(f=compose_file)
+            },
+        }
+    )
+
+
+def certbot(domain, email, conf_dir='/opt/certs/', copy_to=None):
+    script_name = '/opt/certbot-auto'
+    commands = {
+        '1_get_cert': {
+            'command': Join(' ', [
+                script_name, 'certonly',
+                '--config-dir', conf_dir,
+                '--standalone --debug --agree-tos --non-interactive',
+                '-d', domain,
+                '--email', email,
+            ])
+        }
+    }
+    if copy_to:
+        commands.update({
+            '2_certs_dest': {
+                'command': 'mkdir -p ' + copy_to,
+            },
+            '3_copy_certs': {
+                'cwd': copy_to,
+                'command': Join('', [
+                    'cp ' + conf_dir.rstrip('/') + '/live/', domain, '/*.pem .'
+                ])
+            },
+        })
+    return cf.InitConfig(
+        'Certbot',
         files={
             script_name: {
                 'source': 'https://dl.eff.org/certbot-auto',
@@ -44,17 +90,7 @@ def certbot(domain, email):
                 'group': 'root',
             },
         },
-        commands={
-            'get_cert': {
-                'command': Join(' ', [
-                    script_name, 'certonly',
-                    '--config-dir', conf_dir,
-                    '--standalone --debug --agree-tos --non-interactive',
-                    '-d', domain,
-                    '--email', email,
-                ])
-            }
-        }
+        commands=commands
     )
 
 
