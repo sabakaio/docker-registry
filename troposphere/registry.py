@@ -14,7 +14,6 @@ az = template.add_parameter(Parameter(
     Type=c.AVAILABILITY_ZONE_NAME,
     Description='Availability Zone of the Subnet'
 ))
-ami_id = GetAtt(ami_lookup(template), 'Id')
 ssh_key = template.add_parameter(Parameter(
     'SSHKeyName',
     Type=c.KEY_PAIR_NAME,
@@ -30,6 +29,9 @@ ssh_location = template.add_parameter(Parameter(
     AllowedPattern='(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})',
     ConstraintDescription='must be a valid IP CIDR range of the form x.x.x.x/x.'
 ))
+
+ami_id = GetAtt(ami_lookup(template), 'Id')
+
 ssh_sg = ec2.SecurityGroup(
     'SSHSecurityGroup', template,
     SecurityGroupIngress=[
@@ -80,6 +82,21 @@ registry = ec2.Instance(
         )
     )],
     Tags=[ec2.Tag('Name', 'docker-registry')],
+)
+
+eip = template.add_parameter(Parameter(
+    'DockerRegistryEIP',
+    Type=c.STRING,
+    Description=(
+        'Allocation ID for the VPC Elastic IP address you want to associate '
+        'with Docker Registry instance. You should already have domain name '
+        'configured for this IP'
+    )
+))
+ec2.EIPAssociation(
+    service_name + 'EIPAccociation', template,
+    AllocationId=Ref(eip),
+    InstanceId=Ref(registry),
 )
 
 template.add_output(Output(
