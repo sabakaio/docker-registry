@@ -5,6 +5,7 @@ from troposphere import GetAtt, Ref
 from troposphere import constants as c, ec2, s3
 
 from helpers import iam
+from helpers import meta
 from helpers.amilookup.resources import ami_lookup
 
 template = Template()
@@ -38,6 +39,14 @@ ssh_sg = ec2.SecurityGroup(
         {'IpProtocol': 'tcp', 'FromPort': '22', 'ToPort': '22', 'CidrIp': Ref(ssh_location)}
     ],
     GroupDescription='Enable SSH on port 22 for given location'
+)
+web_sg = ec2.SecurityGroup(
+    'WebSecurityGroup', template,
+    SecurityGroupIngress=[
+        # {'IpProtocol': 'tcp', 'FromPort': '80', 'ToPort': '80', 'CidrIp': '0.0.0.0/0'},
+        {'IpProtocol': 'tcp', 'FromPort': '443', 'ToPort': '443', 'CidrIp': '0.0.0.0/0'},
+    ],
+    GroupDescription='Enable HTTP/HTTPS ports for all incoming traffic'
 )
 
 service_name = 'DockerRegistry'
@@ -73,7 +82,7 @@ registry = ec2.Instance(
     InstanceType=Ref(registry_instance_type),
     ImageId=ami_id,
     KeyName=Ref(ssh_key),
-    SecurityGroupIds=[Ref(ssh_sg)],
+    SecurityGroupIds=[Ref(ssh_sg), Ref(web_sg)],
     BlockDeviceMappings=[ec2.BlockDeviceMapping(
         DeviceName='/dev/xvda',
         Ebs=ec2.EBSBlockDevice(
@@ -82,6 +91,22 @@ registry = ec2.Instance(
         )
     )],
     Tags=[ec2.Tag('Name', 'docker-registry')],
+)
+
+
+registry_domain = template.add_parameter(Parameter(
+    'DockerRegistryCertDomainName',
+    Type=c.STRING,
+    Description='Domain to issue certificate for'
+))
+registry_domain_email = template.add_parameter(Parameter(
+    'DockerRegistryCertEmail',
+    Type=c.STRING,
+    Description='Email to use on certificate issue'
+))
+meta.add_init(
+    registry,
+    partial(meta.certbot, Ref(registry_domain), Ref(registry_domain_email))
 )
 
 eip = template.add_parameter(Parameter(
