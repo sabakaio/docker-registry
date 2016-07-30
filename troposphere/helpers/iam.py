@@ -71,7 +71,7 @@ def make_role(name, template, *policies):
         return p
 
     return iam.Role(
-        name, template, Path='/',
+        name + 'Role', template, Path='/',
         AssumeRolePolicyDocument=Policy(Statement=[
             Statement(
                 Effect=Allow,
@@ -84,5 +84,5 @@ def make_role(name, template, *policies):
 
 
 def make_instance_profile(name, template, *policies):
-    role = make_role(name + 'Role', template, *policies)
+    role = make_role(name, template, *policies)
     return iam.InstanceProfile(name, template, Roles=[Ref(role)])

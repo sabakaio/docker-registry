@@ -8,7 +8,7 @@ def ami_lookup(template):
     name = 'AMILookupFunction'
     role = make_role(name, template, describe_images, logs_writer)
 
-    with open(os.path.join(os.path.dirname(__file__), 'funcrion.js')) as f:
+    with open(os.path.join(os.path.dirname(__file__), 'function.js')) as f:
         func = awslambda.Function(
             name, template,
             Code=awslambda.Code(

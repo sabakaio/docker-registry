@@ -61,7 +61,7 @@ registry_block_device_size = template.add_parameter(Parameter(
     service_name + 'BlockDeviseSize',
     Type=c.STRING,
     Default='30',
-    Description='{s} root file system size (GB)'.format(n=service_name)
+    Description='{n} root file system size (GB)'.format(n=service_name)
 ))
 
 registry = ec2.Instance(
@@ -86,3 +86,5 @@ template.add_output(Output(
     registry.title + 'Ip',
     Value=GetAtt(registry, 'PublicIp')
 ))
+
+print(template.to_json())
