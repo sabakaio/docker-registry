@@ -2,6 +2,26 @@ from troposphere import Ref, Base64, Join
 from troposphere import cloudformation as cf, ec2, autoscaling as au
 
 
+def docker():
+    return cf.InitConfig(
+        'docker',
+        packages={'yum': {'docker': []}},
+        commands={
+            'docker_user': {
+                'command': 'usermod -aG docker ec2-user'
+            },
+        },
+        services={
+            'sysvinit': {
+                'docker': {
+                    'enabled': True,
+                    'ensureRunning': True
+                }
+            }
+        }
+    )
+
+
 def certbot(domain, email):
     script_name = '/opt/certbot-auto'
     conf_dir = '/opt/certs'

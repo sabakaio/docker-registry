@@ -106,7 +106,8 @@ registry_domain_email = template.add_parameter(Parameter(
 ))
 meta.add_init(
     registry,
-    partial(meta.certbot, Ref(registry_domain), Ref(registry_domain_email))
+    meta.docker,
+    meta.certbot(Ref(registry_domain), Ref(registry_domain_email))
 )
 
 eip = template.add_parameter(Parameter(
