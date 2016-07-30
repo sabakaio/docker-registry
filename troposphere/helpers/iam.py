@@ -64,11 +64,14 @@ def logs_writer(name=None, template=None):
     )
 
 
-def make_role(name, template, *policies):
+def make_role(name, template, assume_to, *policies):
     def _policy(p):
         if callable(p):
             return p(name=name, template=template)
         return p
+
+    if not isinstance(assume_to, list):
+        assume_to = [assume_to]
 
     return iam.Role(
         name + 'Role', template, Path='/',
@@ -76,7 +79,7 @@ def make_role(name, template, *policies):
             Statement(
                 Effect=Allow,
                 Action=[AssumeRole],
-                Principal=Principal('Service', ['ec2.amazonaws.com'])
+                Principal=Principal('Service', assume_to)
             )
         ]),
         Policies=[_policy(p) for p in policies]
@@ -84,5 +87,5 @@ def make_role(name, template, *policies):
 
 
 def make_instance_profile(name, template, *policies):
-    role = make_role(name, template, *policies)
+    role = make_role(name, template, 'ec2.amazonaws.com', *policies)
     return iam.InstanceProfile(name, template, Roles=[Ref(role)])
