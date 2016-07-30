@@ -5,7 +5,7 @@ from helpers.iam import make_role, describe_images, logs_writer
 
 
 def ami_lookup(template):
-    name = 'AMILookupFunction'
+    name = 'AMILookup'
     role = make_role(name, template, describe_images, logs_writer)
 
     with open(os.path.join(os.path.dirname(__file__), 'function.js')) as f:
