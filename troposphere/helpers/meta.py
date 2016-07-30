@@ -14,6 +14,15 @@ def certbot(domain, email):
                 'owner': 'root',
                 'group': 'root',
             },
+            '/etc/cron.daily/certbot_renew': {
+                'content': Join('', [
+                    '#/bin/bash -e\n',
+                    script_name + ' renew --config-dir ' + conf_dir,
+                ]),
+                'mode': '000755',
+                'owner': 'root',
+                'group': 'root',
+            },
         },
         commands={
             'get_cert': {
