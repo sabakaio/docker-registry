@@ -5,6 +5,7 @@ from troposphere import GetAtt, Ref
 from troposphere import constants as c, ec2, s3
 
 from helpers import iam
+from helpers.amilookup.resources import ami_lookup
 
 template = Template()
 
@@ -13,6 +14,7 @@ az = template.add_parameter(Parameter(
     Type=c.AVAILABILITY_ZONE_NAME,
     Description='Availability Zone of the Subnet'
 ))
+ami_id = GetAtt(ami_lookup(template), 'Id')
 ssh_key = template.add_parameter(Parameter(
     'SSHKeyName',
     Type=c.KEY_PAIR_NAME,
@@ -67,6 +69,7 @@ registry = ec2.Instance(
     AvailabilityZone=Ref(az),
     IamInstanceProfile=Ref(registry_profile),
     InstanceType=Ref(registry_instance_type),
+    ImageId=ami_id,
     KeyName=Ref(ssh_key),
     SecurityGroupIds=[Ref(ssh_sg)],
     BlockDeviceMappings=[ec2.BlockDeviceMapping(
