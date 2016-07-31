@@ -25,6 +25,20 @@ def docker():
     )
 
 
+def htpasswd(filename):
+    return cf.InitConfig(
+        'htpasswd',
+        files={
+            filename: {
+                'content': 'user:password_hash',
+                'mode': '000660',
+                'owner': 'root',
+                'group': 'docker',
+            },
+        }
+    )
+
+
 def docker_compose(name, compose_yml):
     name = name.lower()
     compose_file = '/opt/{n}/docker-compose.yml'.format(n=name)

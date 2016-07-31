@@ -43,10 +43,9 @@ ssh_sg = ec2.SecurityGroup(
 web_sg = ec2.SecurityGroup(
     'WebSecurityGroup', template,
     SecurityGroupIngress=[
-        # {'IpProtocol': 'tcp', 'FromPort': '80', 'ToPort': '80', 'CidrIp': '0.0.0.0/0'},
         {'IpProtocol': 'tcp', 'FromPort': '443', 'ToPort': '443', 'CidrIp': '0.0.0.0/0'},
     ],
-    GroupDescription='Enable HTTP/HTTPS ports for all incoming traffic'
+    GroupDescription='Enable HTTPS ports for all incoming traffic'
 )
 
 service_name = 'DockerRegistry'
@@ -105,7 +104,8 @@ registry_domain_email = template.add_parameter(Parameter(
     Description='Email to use on certificate issue'
 ))
 
-registry_certs = '/opt/registry/certs/'
+registry_certs = '/opt/registry/security/'
+registry_htpasswd = '/opt/registry/htpasswd'
 registry_compose = Join('', [
     'version: "2"\n',
     'services:\n',
@@ -123,8 +123,12 @@ registry_compose = Join('', [
     '      REGISTRY_STORAGE_S3_BUCKET: ', Ref(bucket), '\n',
     '      REGISTRY_HTTP_TLS_CERTIFICATE: /certs/fullchain.pem\n',
     '      REGISTRY_HTTP_TLS_KEY: /certs/privkey.pem\n',
+    '      REGISTRY_AUTH: htpasswd\n',
+    '      REGISTRY_AUTH_HTPASSWD_REALM: "Registry Realm"\n',
+    '      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd\n',
     '    volumes:\n',
     '      - {d}:/certs:ro\n'.format(d=registry_certs),
+    '      - {f}:/auth/htpasswd\n'.format(f=registry_htpasswd),
 ])
 
 meta.add_init(
@@ -134,6 +138,7 @@ meta.add_init(
         Ref(registry_domain),
         Ref(registry_domain_email),
         copy_to=registry_certs),
+    meta.htpasswd(registry_htpasswd),
     meta.docker_compose('registry', registry_compose)
 )
 
