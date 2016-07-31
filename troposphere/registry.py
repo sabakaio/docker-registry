@@ -43,10 +43,9 @@ ssh_sg = ec2.SecurityGroup(
 web_sg = ec2.SecurityGroup(
     'WebSecurityGroup', template,
     SecurityGroupIngress=[
-        # {'IpProtocol': 'tcp', 'FromPort': '80', 'ToPort': '80', 'CidrIp': '0.0.0.0/0'},
         {'IpProtocol': 'tcp', 'FromPort': '443', 'ToPort': '443', 'CidrIp': '0.0.0.0/0'},
     ],
-    GroupDescription='Enable HTTP/HTTPS ports for all incoming traffic'
+    GroupDescription='Enable HTTPS ports for all incoming traffic'
 )
 
 service_name = 'DockerRegistry'
