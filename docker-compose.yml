@@ -1,0 +1,27 @@
+version: "2"
+
+services:
+  proxy:
+    image: nginx:1.10-alpine
+    container_name: proxy
+    ports:
+      - 443:443
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./registry.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${CERTS_DIR}/dh.pem:/etc/nginx/external/dh.pem:ro
+      - ${CERTS_DIR}/fullchain.pem:/etc/nginx/external/cert.pem:ro
+      - ${CERTS_DIR}/privkey.pem:/etc/nginx/external/key.pem:ro
+
+  registry:
+    restart: always
+    image: registry:2
+    container_name: registry
+    ports:
+      - 127.0.0.1:5000:5000
+    environment:
+      REGISTRY_STORAGE: s3
+      REGISTRY_STORAGE_S3_REGION: ${AWS_REGION}
+      REGISTRY_STORAGE_S3_ACCESSKEY: ""
+      REGISTRY_STORAGE_S3_SECRETKEY: ""
+      REGISTRY_STORAGE_S3_BUCKET: ${STORAGE_BUCKET}
