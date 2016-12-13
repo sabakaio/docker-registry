@@ -42,7 +42,7 @@ def htpasswd(filename):
 def docker_compose(name, compose_yml):
     name = name.lower()
     compose_file = '/opt/{n}/docker-compose.yml'.format(n=name)
-    return cf.InitConfig(
+    init = cf.InitConfig(
         'Compose' + name.title(),
         files={
             compose_file: {
@@ -58,9 +58,11 @@ def docker_compose(name, compose_yml):
             },
         }
     )
+    return init, compose_file
 
 
-def certbot(domain, email, conf_dir='/opt/certs/', copy_to=None):
+def certbot(domain, email, conf_dir='/opt/certs/', copy_to=None,
+            pre_hook=None, post_hook=None):
     script_name = '/opt/certbot-auto'
     commands = {
         '1_get_cert': {
@@ -73,18 +75,40 @@ def certbot(domain, email, conf_dir='/opt/certs/', copy_to=None):
             ])
         }
     }
+
+    renew_script = [
+        '#/bin/bash -e\n',
+        'unset PYTHON_INSTALL_LAYOUT\n',
+        script_name + ' renew --config-dir ' + conf_dir,
+        ' --debug --non-interactive',
+    ]
+    if pre_hook:
+        renew_script.append(' --pre-hook="' + pre_hook + '"')
+
+    copy_certs = None
     if copy_to:
+        copy_certs = Join('', [
+            'cp ' + conf_dir.rstrip('/') + '/live/', domain, '/*.pem ', copy_to
+        ])
         commands.update({
             '2_certs_dest': {
                 'command': 'mkdir -p ' + copy_to,
             },
             '3_copy_certs': {
-                'cwd': copy_to,
-                'command': Join('', [
-                    'cp ' + conf_dir.rstrip('/') + '/live/', domain, '/*.pem .'
-                ])
+                'command': copy_certs,
             },
         })
+
+    # Copy certificated and/or run a custop post-hook
+    if copy_certs or post_hook:
+        hook = [' --post-hook="']
+        if copy_certs:
+            hook.append(copy_certs)
+        if post_hook:
+            hook.extend([' && ', post_hook])
+        hook.append('"')
+        renew_script.append(hook)
+
     return cf.InitConfig(
         'Certbot',
         files={
@@ -95,10 +119,7 @@ def certbot(domain, email, conf_dir='/opt/certs/', copy_to=None):
                 'group': 'root',
             },
             '/etc/cron.daily/certbot_renew': {
-                'content': Join('', [
-                    '#/bin/bash -e\n',
-                    script_name + ' renew --config-dir ' + conf_dir,
-                ]),
+                'content': Join('', renew_script),
                 'mode': '000755',
                 'owner': 'root',
                 'group': 'root',

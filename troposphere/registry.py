@@ -130,16 +130,25 @@ registry_compose = Join('', [
     '      - {d}:/certs:ro\n'.format(d=registry_certs),
     '      - {f}:/auth/htpasswd\n'.format(f=registry_htpasswd),
 ])
+compose_init, compose_file = meta.docker_compose('registry', registry_compose)
+
+compose = '{b} -f {f}'.format(
+    b='/usr/local/bin/docker-compose',
+    f=compose_file)
+certbot_init = meta.certbot(
+    Ref(registry_domain),
+    Ref(registry_domain_email),
+    copy_to=registry_certs,
+    pre_hook=('%s stop' % compose),
+    post_hook=('%s up -d' % compose),
+)
 
 meta.add_init(
     registry,
     meta.docker,
-    meta.certbot(
-        Ref(registry_domain),
-        Ref(registry_domain_email),
-        copy_to=registry_certs),
+    certbot_init,
     meta.htpasswd(registry_htpasswd),
-    meta.docker_compose('registry', registry_compose)
+    compose_init,
 )
 
 eip = template.add_parameter(Parameter(
